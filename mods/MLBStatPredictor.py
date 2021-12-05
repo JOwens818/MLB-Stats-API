@@ -29,7 +29,13 @@ class MLBStatPredictor:
         lin_reg1 = LinearRegression()
         lin_reg1.fit(x_poly,y)
 
-        return lin_reg1.predict(poly_reg.fit_transform([[year]]))
+        predicted = lin_reg1.predict(poly_reg.fit_transform([[year]]))
+        score = lin_reg1.score(x_poly,y)
+
+        return {
+            "predicted": predicted[0][0],
+            "score": score
+        }
     
 
 
@@ -76,19 +82,23 @@ class MLBStatPredictor:
 
 
 
-    def xgboost_predict(self, stats, fileNm):
+    def xgboost_predict(self, stats, fileNm, age=None):
         file_path = self.dir_path + '/' + fileNm + '.pkl'
         xgb_model = pickle.load(open(file_path, "rb"))
-        pred = np.array([self.format_player_stats(stats)])
+        pred = np.array([self.format_player_stats(stats, age)])
         predicted = xgb_model.predict(pred)
         return str(predicted[0])
 
 
 
-    def format_player_stats(self, stats):
+    def format_player_stats(self, stats, age=None):
         formatted_stats = []
 
-        formatted_stats.append(stats["player_age"])
+        if age is None:
+            formatted_stats.append(stats["player_age"])
+        else:
+            formatted_stats.append(age)
+        
         formatted_stats.append(stats["b_ab"])
         formatted_stats.append(stats["b_total_pa"])
         formatted_stats.append(stats["b_total_hits"])
@@ -114,4 +124,48 @@ class MLBStatPredictor:
         formatted_stats.append(stats["b_played_dh"])
 
         return formatted_stats
+
+
+
+    def generate_predictions(self, df, year, model_type, xgb_only):
+        df_unique = df[['last_name', 'first_name', 'player_id']].drop_duplicates()
+        df_final_predictions = pd.DataFrame(columns=['PLAYER_ID', 'MLB_YEAR', 'XWOBA_PREDICTED', 'RSQUARED' ,'MODEL'])
+        
+        for index, row in df_unique.iterrows():
+            df_player = df[(df['player_id'] == row['player_id'])]
+            max_year = df_player['mlb_year'].max()
+            if year - max_year > 2:
+                continue
+            
+            if len(df_player.index) < 3 or xgb_only:
+                prediction = self.predict_player_xgboost(df_player, model_type)
+                df_final_predictions.loc[len(df_final_predictions)] = [row['player_id'], year, prediction, None, model_type]
+            else:
+                prediction = self.predict_player_sklearn(df_player, year)
+                df_final_predictions.loc[len(df_final_predictions)] = [row['player_id'], year, prediction['predicted'], prediction['score'], 'sklearn']
+
+        return df_final_predictions
+    
+
+
+    def predict_player_sklearn(self, df, year):
+        avg_xwoba = df['xwoba'].mean()
+        pred_difference = 99.0
+        prediction = {}
+        
+        for x in range(1,4):
+            result = self.create_and_predict_lin_reg(df, x, year)
+            calc_diff = abs(result["predicted"] - avg_xwoba)
+            if calc_diff < pred_difference:
+                pred_difference = calc_diff
+                prediction = result
+
+        return prediction
+
+
+
+    def predict_player_xgboost(self, df, model_type):
+        age = df['player_age'].max() + 1
+        dict_mean_vals = df.mean().to_dict()
+        return self.xgboost_predict(dict_mean_vals, model_type, age)
 

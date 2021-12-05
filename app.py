@@ -72,3 +72,32 @@ def xgb_model_predict():
     except Exception as e:
         app.logger.error(e)
         return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+
+
+
+@app.route('/predict-stats', methods=['POST'])
+def predict_stats():
+    try:
+        req = json.loads(request.data)
+        year = req["year"]
+        model_type = req["model_type"]
+        xgb_only = req["xgb_only"]
+
+        print("Getting DB2 data")
+        db = DB2Connect(DB2_CREDS)
+        df = db.get_all_data('2015', year)
+
+        print("Running prediction method")
+        mlb_predictor = MLBStatPredictor('xwoba')
+        predictions = mlb_predictor.generate_predictions(df, int(year) + 1, model_type, xgb_only)
+        
+        print("Saving data in DB2")
+        db.delete_model_predictions_by_year(int(year) + 1)
+        db.append_to_table(predictions, "player_predictions", "append")
+
+        return Response(status=201, mimetype='application/json')
+
+    except Exception as e:
+        app.logger.error(e)
+        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+    

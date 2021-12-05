@@ -75,3 +75,36 @@ class DB2Connect:
             "VALUES (?,?,?,?,?,?,?,?)"
         )
         self.engine.execute(sql, con=self.conn, *params)
+
+
+
+    def delete_model_predictions_by_year(self, year):
+        params = [year]
+        sql = "DELETE FROM PLAYER_PREDICTIONS WHERE MLB_YEAR = ?"
+        self.engine.execute(sql, con=self.conn, *params)
+
+
+
+    def append_to_table(self, df, tblNm, if_exists):
+        df.to_sql(
+            tblNm,
+            self.engine,
+            if_exists=if_exists,
+            index=False,
+            chunksize=500,
+            method="multi",
+            dtype=self.get_table_datatypes(tblNm)
+        )
+
+
+
+    def get_table_datatypes(self, tblNm):
+
+        if tblNm == "player_predictions":
+            return {
+                "PLAYER_ID": sa.types.INTEGER,
+                "MLB_YEAR": sa.types.SMALLINT,
+                "XWOBA_PREDICTED": sa.types.DECIMAL,
+                "RSQUARED": sa.types.REAL,
+                "MODEL": sa.types.VARCHAR(50)
+            }
