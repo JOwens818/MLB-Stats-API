@@ -25,6 +25,21 @@ class DB2Connect:
 
 
 
+    def get_histogram_data(self, fieldNm):
+        
+        # Ensure valid field name is requested
+        sql = "SELECT NAME AS field FROM SYSIBM.SYSCOLUMNS WHERE TBcreator = 'MLN78422' and TBNAME = 'MLBSTATS'"
+        fields = pd.read_sql(sql, con=self.conn)
+        if not fieldNm in fields['field'].values:
+            print("not found")
+            return False
+
+        # Now get data
+        sql = f'SELECT \'histdata\' as "group", {fieldNm} as "value" from mlbstats'
+        return pd.read_sql(sql, con=self.conn).to_json(orient='records')
+
+
+
     def save_xgb_scores(self, scores, model_type):
 
         # Delete current scores

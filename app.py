@@ -2,6 +2,7 @@ import json
 import os
 import logging
 from flask import Flask, jsonify, request, Response
+from flask_cors import CORS
 from mods.MLBStatPredictor import MLBStatPredictor
 from mods.DB2Connect import DB2Connect
 from dotenv import load_dotenv, find_dotenv
@@ -17,6 +18,7 @@ DB2_CREDS = {
 }
 
 app = Flask(__name__)
+CORS(app)
 
 # Setup Logging
 gu_logger = logging.getLogger('gunicorn.error')
@@ -24,7 +26,7 @@ app.logger.handlers = gu_logger.handlers
 app.logger.setLevel(gu_logger.level)
 
 
-@app.route('/create-xgb-model', methods=['POST'])
+@app.route('/api/create-xgb-model', methods=['POST'])
 def create_xgb_model():
     try:
         req = json.loads(request.data)
@@ -60,7 +62,7 @@ def create_xgb_model():
 
 
 
-@app.route('/xgb-model-predict', methods=['POST'])
+@app.route('/api/xgb-model-predict', methods=['POST'])
 def xgb_model_predict():
     try:
         req = json.loads(request.data)
@@ -75,7 +77,7 @@ def xgb_model_predict():
 
 
 
-@app.route('/predict-stats', methods=['POST'])
+@app.route('/api/predict-stats', methods=['POST'])
 def predict_stats():
     try:
         req = json.loads(request.data)
@@ -94,10 +96,28 @@ def predict_stats():
         print("Saving data in DB2")
         db.delete_model_predictions_by_year(int(year) + 1)
         db.append_to_table(predictions, "player_predictions", "append")
+        db.conn.close()
 
         return Response(status=201, mimetype='application/json')
 
     except Exception as e:
         app.logger.error(e)
         return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
-    
+
+
+
+@app.route('/api/histogram', methods=['GET'])
+def get_histogram_data():
+    try:
+        db = DB2Connect(DB2_CREDS)
+        hist_data = db.get_histogram_data(request.args['field'])
+        if not hist_data:
+            db.conn.close()
+            raise Exception("Requested field does not exist")
+            
+        db.conn.close()
+        return Response(hist_data, status=200, mimetype='application/json')
+        
+    except Exception as e:
+        app.logger.error(e)
+        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json') 

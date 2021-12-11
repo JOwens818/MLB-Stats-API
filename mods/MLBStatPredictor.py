@@ -15,7 +15,7 @@ class MLBStatPredictor:
 
     def __init__(self, target):
         self.target = target
-        self.dir_path = os.path.dirname(os.path.realpath(__file__))
+        self.dir_path = os.path.abspath(os.curdir)
 
 
     def create_and_predict_lin_reg(self, df, deg, year):
