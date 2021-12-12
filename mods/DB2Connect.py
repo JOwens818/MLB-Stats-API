@@ -66,6 +66,19 @@ class DB2Connect:
 
 
 
+    def get_scatter_data(self, fieldNm):
+
+        # Ensure valid field name is requested
+        sql = "SELECT NAME AS field FROM SYSIBM.SYSCOLUMNS WHERE TBcreator = 'MLN78422' and TBNAME = 'MLBSTATS'"
+        fields = pd.read_sql(sql, con=self.conn)
+        if not fieldNm in fields['field'].values:
+            return False
+
+        sql = f'SELECT \'scatterdata\' as "group", XWOBA as "xwoba", {fieldNm} as "selectedField" FROM MLBSTATS'
+        return pd.read_sql(sql, con=self.conn).to_json(orient='records')
+
+
+
     def save_xgb_scores(self, scores, model_type):
 
         # Delete current scores

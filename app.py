@@ -127,3 +127,18 @@ def get_histogram_stats():
     except Exception as e:
         app.logger.error(e)
         return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')  
+
+
+
+@app.route('/api/scatter', methods=['GET'])
+def get_scatter_data():
+    try:
+        scatter_data = DB2.get_scatter_data(request.args['field'])
+        if not scatter_data:
+            raise Exception("Requested field does not exist")
+
+        return Response(scatter_data, status=200, mimetype='application/json')
+
+    except Exception as e:
+        app.logger.error(e)
+        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
