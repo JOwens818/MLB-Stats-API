@@ -19,6 +19,8 @@ DB2_CREDS = {
 
 app = Flask(__name__)
 CORS(app)
+DB2 = DB2Connect(DB2_CREDS)
+MLB_PREDICTOR = MLBStatPredictor('xwoba')
 
 # Setup Logging
 gu_logger = logging.getLogger('gunicorn.error')
@@ -42,18 +44,15 @@ def create_xgb_model():
         }
 
         app.logger.info("Getting data from DB2")
-        db = DB2Connect(DB2_CREDS)
-        df = db.get_all_data('2015', '2020')
+        df = DB2.get_all_data('2015', '2020')
         
         app.logger.info("Creating and saving " + model_type)
-        mlb_predictor = MLBStatPredictor('xwoba')
-        scores = mlb_predictor.create_xgboost_model(df, model_type, hyper_params)
+        scores = MLB_PREDICTOR.create_xgboost_model(df, model_type, hyper_params)
         
         app.logger.info("Saving scores and hyperparameters to BD2")
-        db.save_xgb_scores(scores, model_type)
-        db.save_xgb_hyperparams(hyper_params, model_type)
+        DB2.save_xgb_scores(scores, model_type)
+        DB2.save_xgb_hyperparams(hyper_params, model_type)
         
-        db.conn.close()
         return Response(status=201, mimetype='application/json')
 
     except Exception as e:
@@ -67,8 +66,7 @@ def xgb_model_predict():
     try:
         req = json.loads(request.data)
         model_type = req["model_type"]
-        mlb_predictor = MLBStatPredictor('xwoba')
-        prediction = mlb_predictor.xgboost_predict(req, model_type)
+        prediction = MLB_PREDICTOR.xgboost_predict(req, model_type)
         return Response("{ 'predicted xwOBA': " + prediction + "} ", status=200, mimetype='application/json')
 
     except Exception as e:
@@ -86,17 +84,14 @@ def predict_stats():
         xgb_only = req["xgb_only"]
 
         print("Getting DB2 data")
-        db = DB2Connect(DB2_CREDS)
-        df = db.get_all_data('2015', year)
+        df = DB2.get_all_data('2015', year)
 
         print("Running prediction method")
-        mlb_predictor = MLBStatPredictor('xwoba')
-        predictions = mlb_predictor.generate_predictions(df, int(year) + 1, model_type, xgb_only)
+        predictions = MLB_PREDICTOR.generate_predictions(df, int(year) + 1, model_type, xgb_only)
         
         print("Saving data in DB2")
-        db.delete_model_predictions_by_year(int(year) + 1)
-        db.append_to_table(predictions, "player_predictions", "append")
-        db.conn.close()
+        DB2.delete_model_predictions_by_year(int(year) + 1)
+        DB2.append_to_table(predictions, "player_predictions", "append")
 
         return Response(status=201, mimetype='application/json')
 
@@ -109,15 +104,26 @@ def predict_stats():
 @app.route('/api/histogram', methods=['GET'])
 def get_histogram_data():
     try:
-        db = DB2Connect(DB2_CREDS)
-        hist_data = db.get_histogram_data(request.args['field'])
+        hist_data = DB2.get_histogram_data(request.args['field'])
         if not hist_data:
-            db.conn.close()
             raise Exception("Requested field does not exist")
-            
-        db.conn.close()
+
         return Response(hist_data, status=200, mimetype='application/json')
-        
+
     except Exception as e:
         app.logger.error(e)
-        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json') 
+        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+
+
+@app.route('/api/histogram-stats', methods=['GET'])
+def get_histogram_stats():
+    try:
+        hist_stats = DB2.get_histogram_stats(request.args['field'])
+        if not hist_stats:
+            raise Exception("Requested field does not exist")
+
+        return Response(hist_stats, status=200, mimetype='application/json')
+
+    except Exception as e:
+        app.logger.error(e)
+        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')  

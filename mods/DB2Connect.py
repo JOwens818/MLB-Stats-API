@@ -31,11 +31,37 @@ class DB2Connect:
         sql = "SELECT NAME AS field FROM SYSIBM.SYSCOLUMNS WHERE TBcreator = 'MLN78422' and TBNAME = 'MLBSTATS'"
         fields = pd.read_sql(sql, con=self.conn)
         if not fieldNm in fields['field'].values:
-            print("not found")
             return False
 
         # Now get data
         sql = f'SELECT \'histdata\' as "group", {fieldNm} as "value" from mlbstats'
+        return pd.read_sql(sql, con=self.conn).to_json(orient='records')
+        
+
+
+    def get_histogram_stats(self, fieldNm):
+
+        # Ensure valid field name is requested
+        sql = "SELECT NAME AS field FROM SYSIBM.SYSCOLUMNS WHERE TBcreator = 'MLN78422' and TBNAME = 'MLBSTATS'"
+        fields = pd.read_sql(sql, con=self.conn)
+        if not fieldNm in fields['field'].values:
+            return False
+        
+        # Now get data
+        sql = (
+            f'SELECT MAX({fieldNm}) as "max", '
+            f'MIN({fieldNm}) as "min", '
+            f'AVG({fieldNm}) as "avg", '
+            f'MEDIAN({fieldNm}) as "median", '
+            
+            f'(SELECT {fieldNm} '
+            'FROM MLBSTATS '
+            f'GROUP BY {fieldNm} '
+            f'ORDER BY COUNT({fieldNm}) DESC '
+            'LIMIT 1) as "mode" '
+
+            'from mlbstats'
+        )
         return pd.read_sql(sql, con=self.conn).to_json(orient='records')
 
 
