@@ -79,6 +79,38 @@ class DB2Connect:
 
 
 
+    def get_all_predicted_data(self):
+        sql = (
+            'WITH Q1 AS '
+                '(select p.PLAYER_ID, '
+                'p.FIRST_NAME, '
+                'p.LAST_NAME, '
+                'm.XWOBA, '
+                'pp.XWOBA_PREDICTED '
+                'from player_predictions pp '
+                'inner join players p on p.player_id = pp.player_id '
+                'inner join mlbstats m on m.player_id = p.player_id '
+                'WHERE m.mlb_year = \'2021\' '
+                'AND pp.mlb_year = \'2021\' '
+            '), Q2 AS '
+                '(SELECT PLAYER_ID, '
+                'XWOBA_PREDICTED '
+                'FROM player_predictions '
+                'WHERE mlb_year = \'2022\' '
+            ') '
+            'SELECT '
+            'Q1.first_name AS "First Name", '
+            'Q1.last_name AS "Last Name", '
+            'Q1.XWOBA AS "2021 Actual xwOBA", '
+            'ROUND(Q1.XWOBA_PREDICTED, 3) AS "2021 Predicted xwOBA", '
+            'ROUND(Q2.XWOBA_PREDICTED, 3) AS "2022 Predicted xwOBA" '
+            'FROM Q1 '
+            'LEFT JOIN Q2 ON Q1.PLAYER_ID = Q2.PLAYER_ID'
+        )
+        return pd.read_sql(sql, con=self.conn).to_json(orient='records')
+
+
+
     def save_xgb_scores(self, scores, model_type):
 
         # Delete current scores
@@ -137,6 +169,16 @@ class DB2Connect:
         sql = "DELETE FROM PLAYER_PREDICTIONS WHERE MLB_YEAR = ?"
         self.engine.execute(sql, con=self.conn, *params)
 
+
+
+    def update_xgb_rsquared(self, model_type, year):
+        params = [model_type, year, model_type]
+        sql = (
+            'UPDATE PLAYER_PREDICTIONS '
+            'SET RSQUARED = (SELECT rsquared from XGBOOST_SCORES where model_type = ?) '
+            'WHERE MLB_YEAR = ? and MODEL = ?'
+        )
+        self.engine.execute(sql, con=self.conn, *params)
 
 
     def append_to_table(self, df, tblNm, if_exists):

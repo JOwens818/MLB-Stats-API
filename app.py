@@ -33,6 +33,7 @@ def create_xgb_model():
     try:
         req = json.loads(request.data)
         model_type = req["model_type"]
+        year = req["year"]
         hyper_params = {
             "n_estimators": req["n_estimators"],
             "subsample": req["subsample"],
@@ -43,8 +44,8 @@ def create_xgb_model():
             "reg_lambda": req["reg_lambda"]
         }
 
-        app.logger.info("Getting data from DB2")
-        df = DB2.get_all_data('2015', '2020')
+        app.logger.info(f"Getting data from DB2 - 2015 - {year}")
+        df = DB2.get_all_data('2015', str(int(year) - 1))
         
         app.logger.info("Creating and saving " + model_type)
         scores = MLB_PREDICTOR.create_xgboost_model(df, model_type, hyper_params)
@@ -84,14 +85,15 @@ def predict_stats():
         xgb_only = req["xgb_only"]
 
         print("Getting DB2 data")
-        df = DB2.get_all_data('2015', year)
+        df = DB2.get_all_data('2015', str(int(year) - 1))
 
         print("Running prediction method")
-        predictions = MLB_PREDICTOR.generate_predictions(df, int(year) + 1, model_type, xgb_only)
+        predictions = MLB_PREDICTOR.generate_predictions(df, int(year), model_type, xgb_only)
         
         print("Saving data in DB2")
-        DB2.delete_model_predictions_by_year(int(year) + 1)
+        DB2.delete_model_predictions_by_year(int(year))
         DB2.append_to_table(predictions, "player_predictions", "append")
+        DB2.update_xgb_rsquared(model_type, int(year))
 
         return Response(status=201, mimetype='application/json')
 
@@ -138,6 +140,18 @@ def get_scatter_data():
             raise Exception("Requested field does not exist")
 
         return Response(scatter_data, status=200, mimetype='application/json')
+
+    except Exception as e:
+        app.logger.error(e)
+        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+
+
+
+@app.route('/api/predicted-stats-all', methods=['GET'])
+def get_predicted_stats_all():
+    try:
+        stats = DB2.get_all_predicted_data()
+        return Response(stats, status=200, mimetype='application/json')
 
     except Exception as e:
         app.logger.error(e)
