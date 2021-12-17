@@ -63,7 +63,9 @@ class MLBStatPredictor:
         explained_var_score = explained_variance_score(predictions,y_test)
 
         # Save model
-        self.xgboost_save_model(xgb, model_type)
+        # commented out for now to avoid user contention
+        # and can possibly be an enhancement in a future iteration
+        #self.xgboost_save_model(xgb, model_type)
 
         return {
             "training": training_score,

@@ -50,7 +50,7 @@ def create_xgb_model():
         app.logger.info("Creating and saving " + model_type)
         scores = MLB_PREDICTOR.create_xgboost_model(df, model_type, hyper_params)
         
-        app.logger.info("Saving scores and hyperparameters to BD2")
+        app.logger.info("Saving scores and hyperparameters to DB2")
         DB2.save_xgb_scores(scores, model_type)
         DB2.save_xgb_hyperparams(hyper_params, model_type)
         
@@ -103,7 +103,19 @@ def predict_stats():
 
 
 
-@app.route('/api/histogram', methods=['GET'])
+@app.route('/api/predicted-stats-all', methods=['GET'])
+def get_predicted_stats_all():
+    try:
+        stats = DB2.get_all_predicted_data()
+        return Response(stats, status=200, mimetype='application/json')
+
+    except Exception as e:
+        app.logger.error(e)
+        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+
+
+
+@app.route('/api/charts/histogram', methods=['GET'])
 def get_histogram_data():
     try:
         hist_data = DB2.get_histogram_data(request.args['field'])
@@ -117,7 +129,8 @@ def get_histogram_data():
         return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
 
 
-@app.route('/api/histogram-stats', methods=['GET'])
+
+@app.route('/api/charts/histogram-stats', methods=['GET'])
 def get_histogram_stats():
     try:
         hist_stats = DB2.get_histogram_stats(request.args['field'])
@@ -132,7 +145,7 @@ def get_histogram_stats():
 
 
 
-@app.route('/api/scatter', methods=['GET'])
+@app.route('/api/charts/scatter', methods=['GET'])
 def get_scatter_data():
     try:
         scatter_data = DB2.get_scatter_data(request.args['field'])
@@ -147,11 +160,38 @@ def get_scatter_data():
 
 
 
-@app.route('/api/predicted-stats-all', methods=['GET'])
-def get_predicted_stats_all():
+@app.route('/api/charts/radar', methods=['GET'])
+def get_radar_player_data():
     try:
-        stats = DB2.get_all_predicted_data()
-        return Response(stats, status=200, mimetype='application/json')
+        player_id = request.args['playerid']
+        radar_data = DB2.get_radar_player_data(player_id)
+        return Response(radar_data, status=200, mimetype='application/json')
+
+    except Exception as e:
+        app.logger.error(e)
+        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+
+
+
+@app.route('/api/charts/line', methods=['GET'])
+def get_line_player_data():
+    try:
+        player_id = request.args['playerid']
+        line_data = DB2.get_line_player_data(player_id)
+        return Response(line_data, status=200, mimetype='application/json')
+
+    except Exception as e:
+        app.logger.error(e)
+        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+
+
+
+@app.route('/api/player-stats', methods=['GET'])
+def get_player_stats_all():
+    try:
+        player_id = request.args['playerid']
+        line_data = DB2.get_player_data_all(player_id)
+        return Response(line_data, status=200, mimetype='application/json')
 
     except Exception as e:
         app.logger.error(e)

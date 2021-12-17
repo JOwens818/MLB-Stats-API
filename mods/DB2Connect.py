@@ -79,6 +79,127 @@ class DB2Connect:
 
 
 
+    def get_radar_player_data(self, player_id):
+        params = [player_id, player_id, player_id, player_id, player_id]
+
+        sql = (
+            'SELECT CONCAT(CONCAT(FIRST_NAME, \' \'), LAST_NAME) AS "player", '
+            '\'Home Runs\' AS "stat", '
+            'SUM(B_HOME_RUN)  AS "value" '
+            'FROM MLBSTATS '
+            'WHERE PLAYER_ID = ? '
+            'GROUP BY CONCAT(CONCAT(FIRST_NAME, \' \'), LAST_NAME), \'Home Runs\' '
+
+            'UNION '
+            'SELECT CONCAT(CONCAT(FIRST_NAME, \' \'), LAST_NAME) AS "player", '
+            '\'RBI\' AS "stat", '
+            'SUM(B_RBI)  AS "value" '
+            'FROM MLBSTATS '
+            'WHERE PLAYER_ID = ? '
+            'GROUP BY CONCAT(CONCAT(FIRST_NAME, \' \'), LAST_NAME), \'RBI\' '
+
+            'UNION '
+            'SELECT CONCAT(CONCAT(FIRST_NAME, \' \'), LAST_NAME) AS "player", '
+            '\'Hits\' AS "stat", '
+            'SUM(B_TOTAL_HITS)  AS "value" '
+            'FROM MLBSTATS '
+            'WHERE PLAYER_ID = ? '
+            'GROUP BY CONCAT(CONCAT(FIRST_NAME, \' \'), LAST_NAME), \'Hits\' '
+
+            'UNION '
+            'SELECT CONCAT(CONCAT(FIRST_NAME, \' \'), LAST_NAME) AS "player", '
+            '\'Strikeouts\' AS "stat", '
+            'SUM(B_STRIKEOUT)  AS "value" '
+            'FROM MLBSTATS '
+            'WHERE PLAYER_ID = ? '
+            'GROUP BY CONCAT(CONCAT(FIRST_NAME, \' \'), LAST_NAME), \'Strikeouts\' '
+
+            'UNION '
+            'SELECT CONCAT(CONCAT(FIRST_NAME, \' \'), LAST_NAME) AS "player", '
+            '\'Walks\' AS "stat", '
+            'SUM(B_WALK) AS "value" '
+            'FROM MLBSTATS '
+            'WHERE PLAYER_ID = ? '
+            'GROUP BY CONCAT(CONCAT(FIRST_NAME, \' \'), LAST_NAME), \'Walks\' '
+        )
+        return pd.read_sql(sql, con=self.conn, params=params).to_json(orient='records')
+
+
+
+    def get_line_player_data(self, player_id):
+        params = [player_id, player_id, player_id, player_id, player_id]
+        sql = (
+            'SELECT \'xwOBA\' AS "group", '
+            'MLB_YEAR AS "key", '
+            'XWOBA AS "value" '
+            'FROM MLBSTATS '
+            'WHERE PLAYER_ID = ? '
+
+            'UNION '
+            'SELECT \'AVG\' AS "group", '
+            'MLB_YEAR AS "key", '
+            'BATTING_AVG AS "value" '
+            'FROM MLBSTATS '
+            'WHERE PLAYER_ID = ? '
+
+            'UNION '
+            'SELECT \'OPS\' AS "group", '
+            'MLB_YEAR AS "key", '
+            'ON_BASE_PLUS_SLG AS "value" '
+            'FROM MLBSTATS '
+            'WHERE PLAYER_ID = ? '
+
+            'UNION '
+            'SELECT \'SLG\' AS "group", '
+            'MLB_YEAR AS "key", '
+            'SLG_PERCENT AS "value" '
+            'FROM MLBSTATS '
+            'WHERE PLAYER_ID = ? '
+
+            'UNION '
+            'SELECT \'ISO\' AS "group", '
+            'MLB_YEAR AS "key", '
+            'ISOLATED_POWER AS "value" '
+            'FROM MLBSTATS '
+            'WHERE PLAYER_ID = ? '
+            'ORDER BY "key" '
+        )
+        return pd.read_sql(sql, con=self.conn, params=params).to_json(orient='records')
+
+
+
+    def get_player_data_all(self, player_id):
+        params = [player_id]
+        sql = (
+            'SELECT ROW_NUMBER() OVER() "ID", '
+            'MLB_YEAR AS "Year", '
+            'PLAYER_AGE AS "Age", '
+            'B_GAME AS "Games", '
+            'B_TOTAL_PA AS "Plate Appearances", '
+            'B_AB AS "At Bats", '
+            'B_TOTAL_HITS AS "Hits", '
+            'B_SINGLE AS "Singles", ' 
+            'B_DOUBLE AS "Doubles", ' 
+            'B_TRIPLE AS "Triples", ' 
+            'B_HOME_RUN AS "Home Runs", '
+            'B_RBI AS "Runs Batted In", '
+            'B_STRIKEOUT AS "Strikeouts", '
+            'B_WALK AS "Walks", ' 
+            'XWOBA AS "xwOBA", '
+            'BATTING_AVG AS "Batting AVG", '
+            'ON_BASE_PERCENT AS "On Base Perc", '
+            'SLG_PERCENT AS "Slugging Perc", '
+            'ON_BASE_PLUS_SLG AS "On Base Plus SLG", '
+            'ISOLATED_POWER AS "Isolated Power", '
+            'B_TOTAL_BASES AS "Total Bases" '
+            'FROM MLBSTATS '
+            'WHERE PLAYER_ID = ? '
+            'ORDER BY MLB_YEAR'
+        )
+        return pd.read_sql(sql, con=self.conn, params=params).to_json(orient='records')
+
+
+
     def get_all_predicted_data(self):
         sql = (
             'WITH Q1 AS '
@@ -103,7 +224,7 @@ class DB2Connect:
                 'WHERE mlb_year = \'2022\' '
             ') '
             'SELECT '
-            'ROW_NUMBER() OVER() "id", '
+            'Q1.PLAYER_ID AS "id", '
             'Q1.first_name AS "First Name", '
             'Q1.last_name AS "Last Name", '
             'Q1.XWOBA AS "2021 Actual xwOBA", '
