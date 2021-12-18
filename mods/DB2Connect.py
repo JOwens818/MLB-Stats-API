@@ -308,6 +308,28 @@ class DB2Connect:
         self.engine.execute(sql, con=self.conn, *params)
 
 
+    def get_prod_model_info(self):
+        sql = (
+            'SELECT n_estimators, '
+            'subsample, '
+            'max_depth, '
+            'CAST(ROUND(learning_rate, 1) AS DECIMAL(6,3)) as learning_rate, '
+            'gamma, '
+            'reg_alpha, '
+            'reg_lambda, '
+            'training, '
+            'mean_cv, '
+            'kfold_cv_avg, '
+            'mse, '
+            'rsquared, '
+            'explained_var '
+            'from xgboost_hyperparams '
+            'inner join xgboost_scores on xgboost_scores.model_type = xgboost_hyperparams.model_type '
+            'where xgboost_hyperparams.model_type = \'prod_model\''
+        )
+        return pd.read_sql(sql, con=self.conn).to_json(orient='records')
+
+
     def append_to_table(self, df, tblNm, if_exists):
         df.to_sql(
             tblNm,

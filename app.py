@@ -49,16 +49,35 @@ def create_xgb_model():
         
         app.logger.info("Creating and saving " + model_type)
         scores = MLB_PREDICTOR.create_xgboost_model(df, model_type, hyper_params)
+
+        #app.logger.info("Saving scores and hyperparameters to DB2")
+        #DB2.save_xgb_scores(scores, model_type)
+        #DB2.save_xgb_hyperparams(hyper_params, model_type)
         
-        app.logger.info("Saving scores and hyperparameters to DB2")
-        DB2.save_xgb_scores(scores, model_type)
-        DB2.save_xgb_hyperparams(hyper_params, model_type)
-        
-        return Response(status=201, mimetype='application/json')
+        response_val = {
+            "n_estimators": hyper_params["n_estimators"],
+            "subsample": hyper_params["subsample"],
+            "max_depth": hyper_params["max_depth"],
+            "learning_rate": hyper_params["learning_rate"],
+            "gamma": hyper_params["gamma"],
+            "reg_alpha": hyper_params["reg_alpha"],
+            "reg_lambda": hyper_params["reg_lambda"],
+            "training": scores["training"],
+            "mean_cv": scores["mean_cv"],
+            "kfold_cv_avg": scores["kf_cv"],
+            "mse": scores["mse"],
+            "rsquared": scores["r2s"],
+            "explained_var": scores["explained_var"]
+        }
+
+        return Response(json.dumps(response_val), status=200, mimetype='application/json')
 
     except Exception as e:
         app.logger.error(e)
-        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+        err_resp = {
+            "errorMsg": repr(e)
+        }
+        return Response(json.dumps(err_resp), status=400, mimetype='application/json')
 
 
 
@@ -68,11 +87,17 @@ def xgb_model_predict():
         req = json.loads(request.data)
         model_type = req["model_type"]
         prediction = MLB_PREDICTOR.xgboost_predict(req, model_type)
-        return Response("{ 'predicted xwOBA': " + prediction + "} ", status=200, mimetype='application/json')
+        resp = {
+            "predicted xwOBA": prediction
+        }
+        return Response(json.dumps(resp), status=200, mimetype='application/json')
 
     except Exception as e:
         app.logger.error(e)
-        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+        err_resp = {
+            "errorMsg": repr(e)
+        }
+        return Response(json.dumps(err_resp), status=400, mimetype='application/json')
 
 
 
@@ -99,7 +124,10 @@ def predict_stats():
 
     except Exception as e:
         app.logger.error(e)
-        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+        err_resp = {
+            "errorMsg": repr(e)
+        }
+        return Response(json.dumps(err_resp), status=400, mimetype='application/json')
 
 
 
@@ -111,7 +139,10 @@ def get_predicted_stats_all():
 
     except Exception as e:
         app.logger.error(e)
-        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+        err_resp = {
+            "errorMsg": repr(e)
+        }
+        return Response(json.dumps(err_resp), status=400, mimetype='application/json')
 
 
 
@@ -126,7 +157,10 @@ def get_histogram_data():
 
     except Exception as e:
         app.logger.error(e)
-        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+        err_resp = {
+            "errorMsg": repr(e)
+        }
+        return Response(json.dumps(err_resp), status=400, mimetype='application/json')
 
 
 
@@ -141,7 +175,10 @@ def get_histogram_stats():
 
     except Exception as e:
         app.logger.error(e)
-        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')  
+        err_resp = {
+            "errorMsg": repr(e)
+        }
+        return Response(json.dumps(err_resp), status=400, mimetype='application/json')
 
 
 
@@ -156,7 +193,10 @@ def get_scatter_data():
 
     except Exception as e:
         app.logger.error(e)
-        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+        err_resp = {
+            "errorMsg": repr(e)
+        }
+        return Response(json.dumps(err_resp), status=400, mimetype='application/json')
 
 
 
@@ -169,7 +209,10 @@ def get_radar_player_data():
 
     except Exception as e:
         app.logger.error(e)
-        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+        err_resp = {
+            "errorMsg": repr(e)
+        }
+        return Response(json.dumps(err_resp), status=400, mimetype='application/json')
 
 
 
@@ -182,7 +225,10 @@ def get_line_player_data():
 
     except Exception as e:
         app.logger.error(e)
-        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+        err_resp = {
+            "errorMsg": repr(e)
+        }
+        return Response(json.dumps(err_resp), status=400, mimetype='application/json')
 
 
 
@@ -195,4 +241,22 @@ def get_player_stats_all():
 
     except Exception as e:
         app.logger.error(e)
-        return Response("{ 'errorMsg': " + repr(e) + " }", status=400, mimetype='application/json')
+        err_resp = {
+            "errorMsg": repr(e)
+        }
+        return Response(json.dumps(err_resp), status=400, mimetype='application/json')
+
+
+
+@app.route('/api/prod-model-info', methods=['GET'])
+def get_prod_model_info():
+    try:
+        prod_info = DB2.get_prod_model_info()
+        return Response(prod_info, status=200, mimetype='application/json')
+
+    except Exception as e:
+        app.logger.error(e)
+        err_resp = {
+            "errorMsg": repr(e)
+        }
+        return Response(json.dumps(err_resp), status=400, mimetype='application/json')
