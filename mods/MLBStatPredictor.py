@@ -7,7 +7,6 @@ from sklearn.metrics import explained_variance_score, r2_score, mean_squared_err
 import xgboost
 import pickle
 import os
-import json
 
 
 class MLBStatPredictor:

@@ -109,13 +109,13 @@ def predict_stats():
         model_type = req["model_type"]
         xgb_only = req["xgb_only"]
 
-        print("Getting DB2 data")
+        app.logger.info("Getting DB2 data")
         df = DB2.get_all_data('2015', str(int(year) - 1))
 
-        print("Running prediction method")
+        app.logger.info("Running prediction method")
         predictions = MLB_PREDICTOR.generate_predictions(df, int(year), model_type, xgb_only)
         
-        print("Saving data in DB2")
+        app.logger.info("Saving data in DB2")
         DB2.delete_model_predictions_by_year(int(year))
         DB2.append_to_table(predictions, "player_predictions", "append")
         DB2.update_xgb_rsquared(model_type, int(year))
