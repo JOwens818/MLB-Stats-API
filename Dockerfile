@@ -1,4 +1,4 @@
-FROM registry.cirrus.ibm.com/public/python-38
+FROM python:3.8
 USER 0
 WORKDIR /usr/src/mlb-api
 COPY requirements.txt .
