@@ -49,7 +49,8 @@ def create_xgb_model():
         
         app.logger.info("Creating and saving " + model_type)
         scores = MLB_PREDICTOR.create_xgboost_model(df, model_type, hyper_params)
-
+        app.logger.info("Model Created!")
+        
         #app.logger.info("Saving scores and hyperparameters to DB2")
         #DB2.save_xgb_scores(scores, model_type)
         #DB2.save_xgb_hyperparams(hyper_params, model_type)
