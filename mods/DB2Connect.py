@@ -74,6 +74,7 @@ class DB2Connect:
         if not fieldNm in fields['field'].values:
             return False
 
+        # Now get data
         sql = f'SELECT \'scatterdata\' as "group", XWOBA as "xwoba", {fieldNm} as "selectedField" FROM MLBSTATS'
         return pd.read_sql(sql, con=self.conn).to_json(orient='records')
 
@@ -271,7 +272,7 @@ class DB2Connect:
         sql = "DELETE FROM XGBOOST_HYPERPARAMS WHERE MODEL_TYPE = ?"
         self.engine.execute(sql, con=self.conn, *params)
 
-        #Insert new record with new score
+        # Insert new record with new score
         params = [
             model_type,
             hyper_params['n_estimators'],

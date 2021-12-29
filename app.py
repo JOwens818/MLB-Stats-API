@@ -20,7 +20,6 @@ DB2_CREDS = {
 app = Flask(__name__)
 CORS(app)
 DB2 = DB2Connect(DB2_CREDS)
-MLB_PREDICTOR = MLBStatPredictor('xwoba')
 
 # Setup Logging
 gu_logger = logging.getLogger('gunicorn.error')
@@ -48,7 +47,8 @@ def create_xgb_model():
         df = DB2.get_all_data('2015', str(int(year) - 1))
         
         app.logger.info("Creating and saving " + model_type)
-        scores = MLB_PREDICTOR.create_xgboost_model(df, model_type, hyper_params)
+        mlb_predict = MLBStatPredictor('xwoba')
+        scores = mlb_predict.create_xgboost_model(df, model_type, hyper_params)
         app.logger.info("Model Created!")
         
         #app.logger.info("Saving scores and hyperparameters to DB2")
@@ -87,7 +87,8 @@ def xgb_model_predict():
     try:
         req = json.loads(request.data)
         model_type = req["model_type"]
-        prediction = MLB_PREDICTOR.xgboost_predict(req, model_type)
+        mlb_predict = MLBStatPredictor('xwoba')
+        prediction = mlb_predict.xgboost_predict(req, model_type)
         resp = {
             "predicted xwOBA": prediction
         }
@@ -114,7 +115,8 @@ def predict_stats():
         df = DB2.get_all_data('2015', str(int(year) - 1))
 
         app.logger.info("Running prediction method")
-        predictions = MLB_PREDICTOR.generate_predictions(df, int(year), model_type, xgb_only)
+        mlb_predict = MLBStatPredictor('xwoba')
+        predictions = mlb_predict.generate_predictions(df, int(year), model_type, xgb_only)
         
         app.logger.info("Saving data in DB2")
         DB2.delete_model_predictions_by_year(int(year))

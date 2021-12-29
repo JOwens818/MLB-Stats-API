@@ -135,7 +135,7 @@ class MLBStatPredictor:
         for index, row in df_unique.iterrows():
             df_player = df[(df['player_id'] == row['player_id'])]
             max_year = df_player['mlb_year'].max()
-            if year - max_year > 2:
+            if year - max_year > 2:     # Most likely the player has retired if this conditin is true
                 continue
             
             if len(df_player.index) < 3 or xgb_only:
